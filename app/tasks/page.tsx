@@ -28,6 +28,10 @@ export default function TasksPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
+  const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
+  const [markingAllDone, setMarkingAllDone] = useState(false);
+
   const router = useRouter();
 
   const showToast = (message: string, type: "success" | "error" | "info") => {
@@ -57,8 +61,6 @@ export default function TasksPage() {
   }, [search]);
 
   const fetchTasks = useCallback(async () => {
-    setLoading(true);
-
     let query = supabase.from("tasks").select("*").order("created_at", {
       ascending: false,
     });
@@ -78,13 +80,13 @@ export default function TasksPage() {
     } else {
       setTasks(data || []);
     }
-
-    setLoading(false);
   }, [statusFilter, debouncedSearch]);
 
   useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
+    if (!loading) {
+      fetchTasks();
+    }
+  }, [fetchTasks, loading]);
 
   const handleCreateTask = async (
     title: string,
@@ -100,33 +102,39 @@ export default function TasksPage() {
       return;
     }
 
-    const { error } = await supabase.from("tasks").insert({
+    const { data, error } = await supabase.from("tasks").insert({
       title,
       description,
       status,
       user_id: user.id,
-    });
+    }).select().single();
 
     if (error) {
       showToast("Failed to create task", "error");
     } else {
+      setTasks(prev => [data, ...prev]);
       showToast("Task created successfully", "success");
-      fetchTasks();
     }
   };
 
   const handleDeleteTask = async (id: string) => {
+    setDeletingTaskId(id);
+
     const { error } = await supabase.from("tasks").delete().eq("id", id);
 
     if (error) {
       showToast("Failed to delete task", "error");
+      setDeletingTaskId(null);
     } else {
+      setTasks(prev => prev.filter(task => task.id !== id));
       showToast("Task deleted", "success");
-      fetchTasks();
+      setDeletingTaskId(null);
     }
   };
 
   const handleStatusChange = async (id: string, status: Task["status"]) => {
+    setUpdatingTaskId(id);
+
     const { error } = await supabase
       .from("tasks")
       .update({ status })
@@ -134,24 +142,42 @@ export default function TasksPage() {
 
     if (error) {
       showToast("Failed to update task", "error");
+      setUpdatingTaskId(null);
     } else {
+      setTasks(prev => prev.map(task =>
+        task.id === id ? { ...task, status } : task
+      ));
       showToast("Task status updated", "success");
-      fetchTasks();
+      setUpdatingTaskId(null);
     }
   };
 
   const handleMarkAllDone = async () => {
+    setMarkingAllDone(true);
+
+    const tasksToUpdate = tasks.filter(t => t.status !== "done").map(t => t.id);
+
+    if (tasksToUpdate.length === 0) {
+      showToast("All tasks are already done", "info");
+      setMarkingAllDone(false);
+      return;
+    }
+
     const { error } = await supabase
       .from("tasks")
       .update({ status: "done" })
-      .neq("status", "done");
+      .in("id", tasksToUpdate);
 
     if (error) {
       showToast("Failed to mark all done", "error");
     } else {
-      showToast("All tasks marked as done", "success");
-      fetchTasks();
+      setTasks(prev => prev.map(task =>
+        tasksToUpdate.includes(task.id) ? { ...task, status: "done" as const } : task
+      ));
+      showToast(`Marked ${tasksToUpdate.length} tasks as done`, "success");
     }
+
+    setMarkingAllDone(false);
   };
 
   const handleLogout = async () => {
@@ -204,16 +230,16 @@ export default function TasksPage() {
             <p className="text-sm text-gray-600 mb-1">Total</p>
             <p className="text-2xl font-bold text-gray-900">{taskStats.total}</p>
           </div>
-          <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-300 shadow-sm">
             <p className="text-sm text-gray-600 mb-1">To Do</p>
             <p className="text-2xl font-bold text-gray-700">{taskStats.todo}</p>
           </div>
-          <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-            <p className="text-sm text-gray-600 mb-1">In Progress</p>
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-300 shadow-sm">
+            <p className="text-sm text-blue-700 mb-1">In Progress</p>
             <p className="text-2xl font-bold text-blue-600">{taskStats.inProgress}</p>
           </div>
-          <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-            <p className="text-sm text-gray-600 mb-1">Done</p>
+          <div className="bg-green-50 p-4 rounded-lg border border-green-300 shadow-sm">
+            <p className="text-sm text-green-700 mb-1">Done</p>
             <p className="text-2xl font-bold text-green-600">{taskStats.done}</p>
           </div>
         </div>
@@ -233,19 +259,24 @@ export default function TasksPage() {
               />
               <button
                 onClick={handleMarkAllDone}
-                className="bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2.5 rounded-lg transition-colors whitespace-nowrap"
+                disabled={markingAllDone || taskStats.todo + taskStats.inProgress === 0}
+                className="bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium px-4 py-2.5 rounded-lg transition-colors whitespace-nowrap flex items-center justify-center gap-2"
               >
-                Mark All Done
+                {markingAllDone ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Updating...
+                  </>
+                ) : (
+                  "Mark All Done"
+                )}
               </button>
             </div>
 
-            {loading && (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-              </div>
-            )}
-
-            {!loading && tasks.length === 0 && (
+            {tasks.length === 0 && (
               <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
                 <svg
                   className="w-16 h-16 text-gray-300 mx-auto mb-4"
@@ -267,6 +298,8 @@ export default function TasksPage() {
                   task={task}
                   onDelete={handleDeleteTask}
                   onStatusChange={handleStatusChange}
+                  isDeleting={deletingTaskId === task.id}
+                  isUpdating={updatingTaskId === task.id}
                 />
               ))}
             </div>
