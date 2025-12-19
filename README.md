@@ -1,36 +1,91 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Task Manager App
+A simple Task Manager application built using Next.js and Supabase, allowing users to authenticate and manage tasks with secure row-level access.
 
-## Getting Started
+Live Demo
+Vercel Deployment
+https://vercel.com/kapils-projects-f4be3a61
 
-First, run the development server:
+GitHub Repository
+https://github.com/Kapil-k-git/task-manager
 
-```bash
+Tech Stack
+Frontend: Next.js (App Router)
+Backend / Database: Supabase
+Authentication: Supabase Auth (Email & Password)
+Database Security: Supabase Row Level Security (RLS)
+
+Deployment: Vercel
+Features
+User signup & login using Supabase Authentication
+Create, view, and manage tasks
+
+Secure task access using Row Level Security (users can only access their own tasks)
+Fully deployed and accessible via Vercel
+Task Payload Example
+{
+"title": "New Task",
+"description": "Task description",
+"status": "todo"
+}
+
+Setup Instructions (Local Development)
+1 Clone the repository
+git clone https://github.com/Kapil-k-git/task-manager.git
+cd task-manager
+
+2 Install dependencies
+npm install
+
+3 Setup Environment Variables
+Create a .env.local file in the root directory and add:
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+These values can be found in your Supabase Dashboard → Project Settings → API
+
+4 Run the development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+App will be available at:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+http://localhost:3000
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Supabase Configuration Notes
+Authentication is handled using Supabase Auth
+The tasks table uses Row Level Security (RLS) to ensure:
+Users can only read/write their own tasks
+Policies are applied based on auth.uid()
 
-## Learn More
+Usage
+Sign up or log in using email & password
+Create tasks
+View and manage your own tasks securely
 
-To learn more about Next.js, take a look at the following resources:
+## Supabase Database & RLS Setup
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+All Supabase-related SQL queries for:
+- Creating the `tasks` table
+- Enabling Row Level Security (RLS)
+- Defining user-based access policies
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+are documented in a separate file for convenience:
 
-## Deploy on Vercel
+**`SUPABASE_SETUP.md`**
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+This file also explains **where and how to execute these queries** inside the Supabase Dashboard (SQL Editor).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Deployment
+The application is deployed using Vercel and connected to Supabase, so:
+Authentication
+Database operations
+RLS policies
+
+work seamlessly in production.
+Author
+Kapil
+GitHub: https://github.com/Kapil-k-git
+
+✅ Submission Checklist
+✅ GitHub repository provided
+✅ README with setup & usage
+✅ Live deployed link included
