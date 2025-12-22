@@ -3,7 +3,7 @@ A simple Task Manager application built using Next.js and Supabase, allowing use
 
 Live Demo
 Vercel Deployment
-https://vercel.com/kapils-projects-f4be3a61
+https://task-manager-alpha-six-52.vercel.app
 
 GitHub Repository
 https://github.com/Kapil-k-git/task-manager
